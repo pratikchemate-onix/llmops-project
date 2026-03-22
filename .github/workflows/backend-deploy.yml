@@ -57,7 +57,6 @@ jobs:
             --platform managed \
             --service-account $RUNTIME_SA \
             --allow-unauthenticated \
-            --set-secrets=ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest \
             --set-env-vars=ENVIRONMENT=production \
             --set-env-vars=GOOGLE_CLOUD_PROJECT=${{ secrets.GCP_PROJECT_ID }} \
             --set-env-vars=VERTEXAI_LOCATION=$REGION \
