@@ -13,9 +13,7 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
           className={`rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${
             isUser
               ? "bg-foreground text-background"
-              : message.isError
-                ? "border border-rose-300 bg-rose-500/10 text-rose-900 dark:text-rose-200"
-                : "border border-black/10 bg-background"
+              : "border border-black/10 bg-background"
           }`}
         >
           {isUser ? (
@@ -27,22 +25,22 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
           )}
         </div>
 
-        {!isUser && !message.isError ? (
+        {!isUser ? (
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-foreground/70">
             <span className="rounded-full border border-black/10 bg-foreground/5 px-2 py-1">
-              pipeline: {message.pipelineExecuted || "unknown"}
+              pipeline: {message.metadata?.pipelineExecuted || "unknown"}
             </span>
             <span className="rounded-full border border-black/10 bg-foreground/5 px-2 py-1">
-              model: {message.model || "unknown"}
+              model: {message.metadata?.model || "unknown"}
             </span>
             <span className="rounded-full border border-black/10 bg-foreground/5 px-2 py-1">
-              latency: {typeof message.latencyMs === "number" ? `${message.latencyMs.toFixed(0)} ms` : "n/a"}
+              latency: {typeof message.metadata?.latencyMs === "number" ? `${message.metadata?.latencyMs?.toFixed(0)} ms` : "n/a"}
             </span>
             <span className="rounded-full border border-black/10 bg-foreground/5 px-2 py-1">
-              RAG: {message.taskDetection?.needs_rag ? "yes" : "no"}
+              RAG: {message.metadata?.taskDetection?.needs_rag ? "yes" : "no"}
             </span>
             <span className="rounded-full border border-black/10 bg-foreground/5 px-2 py-1">
-              Agent: {message.taskDetection?.needs_agent ? "yes" : "no"}
+              Agent: {message.metadata?.taskDetection?.needs_agent ? "yes" : "no"}
             </span>
           </div>
         ) : null}
