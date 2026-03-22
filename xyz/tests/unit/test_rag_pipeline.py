@@ -9,7 +9,7 @@ def test_rag_pipeline_execute():
     config = {
         "model": "mock-rag-model",
         "prompt_template": "Context: {context}\nQuestion: {user_input}",
-        "vector_store_type": "mock"
+        "vector_store_type": "mock",
     }
     pipeline = RAGPipeline(config)
     user_input = "What is the capital of France?"
@@ -31,12 +31,9 @@ def test_rag_pipeline_execute():
             assert result == "Paris is the capital of France."
 
             # Verify that the prompt was formatted correctly with retrieved docs
-            expected_prompt = (
-                "Context: Doc 1\n\nDoc 2\n"
-                "Question: What is the capital of France?"
-            )
+            expected_prompt = "Context: Doc 1\n\nDoc 2\n" "Question: What is the capital of France?"
             mock_generate.assert_called_once_with(expected_prompt, "mock-rag-model")
-            
+
             # Verify vector store interaction
             MockFactory.get_store.assert_called_with("mock")
             mock_store.search.assert_called_with(user_input, limit=3)

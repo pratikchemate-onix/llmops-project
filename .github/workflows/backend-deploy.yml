@@ -12,6 +12,8 @@ env:
   REGION: asia-south1
   SERVICE_NAME: llmops-backend
   IMAGE: asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/llmops-repo/backend
+  # Service Account for the RUNNING application (created by Terraform)
+  RUNTIME_SA: llmops-backend-sa@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com
 
 jobs:
   deploy:
@@ -45,18 +47,20 @@ jobs:
           docker push $IMAGE:latest
 
       - name: Deploy to Cloud Run
-        # Removed GOOGLE_API_KEY secret injection.
-        # Added GOOGLE_CLOUD_PROJECT env var for Vertex AI.
+        # Uses the RUNTIME_SA for identity.
+        # Uses standard Vertex AI environment variables.
         run: |
           gcloud run deploy $SERVICE_NAME \
             --image $IMAGE:${{ github.sha }} \
             --region $REGION \
             --platform managed \
+            --service-account $RUNTIME_SA \
             --allow-unauthenticated \
             --set-secrets=ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest \
             --set-env-vars=ENVIRONMENT=production \
             --set-env-vars=GOOGLE_CLOUD_PROJECT=${{ secrets.GCP_PROJECT_ID }} \
-            --memory=512Mi \
+            --set-env-vars=VERTEXAI_LOCATION=$REGION \
+            --memory=1Gi \
             --cpu=1 \
             --min-instances=0 \
             --max-instances=10 \
