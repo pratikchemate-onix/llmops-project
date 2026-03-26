@@ -4,12 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
+      - 'xyz/**'
       - '.github/workflows/code-quality.yml'
-      - '.github/workflows/required-checks.yml'
   workflow_dispatch:
   workflow_call:
 
@@ -20,7 +16,7 @@ jobs:
     timeout-minutes: 10  # Typical run: 2-3 min (format, lint, type check, tests). 10 min prevents hanging
     strategy:
       matrix:
-        python-version: ['3.13']
+        python-version: ['3.11']
       fail-fast: false
     
     steps:
@@ -29,30 +25,35 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-
       - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
 
       - name: Install dependencies
-        run: uv sync --all-extras --locked
+        working-directory: xyz
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff mypy pytest pytest-cov pytest-asyncio pytest-mock types-grpcio
 
       - name: Run Ruff formatting check
-        run: uv run ruff format --check
+        working-directory: xyz
+        run: ruff format --check .
         if: success() || failure()
 
       - name: Run Ruff linting
-        run: uv run ruff check --output-format=github
+        working-directory: xyz
+        run: ruff check --output-format=github .
         if: success() || failure()
 
       - name: Run MyPy type checking
-        run: uv run mypy
+        working-directory: xyz
+        run: mypy app utils pipelines --config-file pyproject.toml
         if: success() || failure()
 
       - name: Run pytest with coverage
-        run: uv run pytest --cov
+        working-directory: xyz
+        run: pytest --cov=app --cov=utils --cov=pipelines --cov-report=term-missing
         if: success() || failure()
