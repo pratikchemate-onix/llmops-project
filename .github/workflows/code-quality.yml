@@ -1,95 +1,58 @@
 name: Code Quality
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "xyz/**/*.py"
-      - "xyz/pyproject.toml"
-      - "xyz/requirements*.txt"
-      - ".github/workflows/code-quality.yml"
   push:
     branches: [main]
     paths:
-      - "xyz/**/*.py"
-      - "xyz/pyproject.toml"
-      - "xyz/requirements*.txt"
+      - 'src/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/code-quality.yml'
+      - '.github/workflows/required-checks.yml'
+  workflow_dispatch:
+  workflow_call:
 
 jobs:
-  lint-and-type-check:
-    name: Lint and Type Check
+  code-quality:
+    name: Code Quality and Tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: xyz
-
+    timeout-minutes: 10  # Typical run: 2-3 min (format, lint, type check, tests). 10 min prevents hanging
+    strategy:
+      matrix:
+        python-version: ['3.13']
+      fail-fast: false
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@v6
         with:
-          python-version: "3.11"
-          cache: "pip"
+          fetch-depth: 1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install ruff mypy pytest pytest-cov pytest-asyncio pytest-mock types-grpcio
+        run: uv sync --all-extras --locked
 
-      - name: Run ruff format check
-        run: ruff format --check .
-        continue-on-error: true  # Non-blocking initially
+      - name: Run Ruff formatting check
+        run: uv run ruff format --check
+        if: success() || failure()
 
-      - name: Run ruff lint
-        run: ruff check .
-        continue-on-error: true  # Non-blocking initially
+      - name: Run Ruff linting
+        run: uv run ruff check --output-format=github
+        if: success() || failure()
 
-      - name: Run mypy type checking
-        run: mypy app utils pipelines --config-file pyproject.toml
-        continue-on-error: true  # Non-blocking initially
+      - name: Run MyPy type checking
+        run: uv run mypy
+        if: success() || failure()
 
-  test-with-coverage:
-    name: Test with Coverage
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: xyz
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: "pip"
-
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-cov pytest-asyncio pytest-mock
-
-      - name: Run tests with coverage
-        env:
-          GOOGLE_CLOUD_PROJECT: test-project
-          BIGQUERY_PROJECT: test-project
-          FIRESTORE_PROJECT: test-project
-        run: |
-          pytest --cov=app --cov=utils --cov=pipelines \
-                 --cov-report=term-missing \
-                 --cov-report=html:htmlcov \
-                 --cov-fail-under=80
-        continue-on-error: true  # Non-blocking initially
-
-      - name: Upload coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: xyz/htmlcov/
-          retention-days: 30
+      - name: Run pytest with coverage
+        run: uv run pytest --cov
+        if: success() || failure()

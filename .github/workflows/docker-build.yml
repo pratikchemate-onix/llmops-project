@@ -90,7 +90,7 @@ jobs:
         id: build
         uses: docker/build-push-action@v7
         with:
-          context: .
+          context: xyz/
           push: ${{ inputs.push }}
           platforms: linux/amd64
           tags: ${{ steps.construct-tags.outputs.full_tags }}

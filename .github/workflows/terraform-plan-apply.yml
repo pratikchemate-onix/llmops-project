@@ -112,12 +112,12 @@ jobs:
         id: fmt
         # Skip on saved plan apply - already checked during plan phase
         if: inputs.use_saved_plan == false
-        working-directory: terraform/main
+        working-directory: infra/advanced_deployment/main
         run: terraform fmt -check -recursive
 
       - name: Terraform Init
         id: init
-        working-directory: terraform/main
+        working-directory: infra/advanced_deployment/main
         run: |
           terraform init \
             -backend-config="bucket=${{ vars.TERRAFORM_STATE_BUCKET }}"
@@ -126,7 +126,7 @@ jobs:
         id: validate
         # Skip on saved plan apply - already validated during plan phase
         if: inputs.use_saved_plan == false
-        working-directory: terraform/main
+        working-directory: infra/advanced_deployment/main
         shell: bash {0}  # Removes -e flag to allow capturing output on failure
         run: |
           # Create secure temp file
@@ -167,7 +167,7 @@ jobs:
       - name: Terraform Plan
         id: plan
         if: inputs.use_saved_plan == false
-        working-directory: terraform/main
+        working-directory: infra/advanced_deployment/main
         shell: bash {0}  # Removes -e flag to allow capturing output on failure
         run: |
           # Create secure temp file
@@ -288,7 +288,7 @@ jobs:
       - name: Terraform Apply
         id: apply
         if: inputs.terraform_action == 'apply'
-        working-directory: terraform/main
+        working-directory: infra/advanced_deployment/main
         shell: bash {0}  # Removes -e flag to allow capturing output on failure
         run: |
           # Create secure temp file
