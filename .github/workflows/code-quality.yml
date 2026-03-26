@@ -1,0 +1,95 @@
+name: Code Quality
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "xyz/**/*.py"
+      - "xyz/pyproject.toml"
+      - "xyz/requirements*.txt"
+      - ".github/workflows/code-quality.yml"
+  push:
+    branches: [main]
+    paths:
+      - "xyz/**/*.py"
+      - "xyz/pyproject.toml"
+      - "xyz/requirements*.txt"
+
+jobs:
+  lint-and-type-check:
+    name: Lint and Type Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: xyz
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff mypy pytest pytest-cov pytest-asyncio pytest-mock types-grpcio
+
+      - name: Run ruff format check
+        run: ruff format --check .
+        continue-on-error: true  # Non-blocking initially
+
+      - name: Run ruff lint
+        run: ruff check .
+        continue-on-error: true  # Non-blocking initially
+
+      - name: Run mypy type checking
+        run: mypy app utils pipelines --config-file pyproject.toml
+        continue-on-error: true  # Non-blocking initially
+
+  test-with-coverage:
+    name: Test with Coverage
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: xyz
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio pytest-mock
+
+      - name: Run tests with coverage
+        env:
+          GOOGLE_CLOUD_PROJECT: test-project
+          BIGQUERY_PROJECT: test-project
+          FIRESTORE_PROJECT: test-project
+        run: |
+          pytest --cov=app --cov=utils --cov=pipelines \
+                 --cov-report=term-missing \
+                 --cov-report=html:htmlcov \
+                 --cov-fail-under=80
+        continue-on-error: true  # Non-blocking initially
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: xyz/htmlcov/
+          retention-days: 30

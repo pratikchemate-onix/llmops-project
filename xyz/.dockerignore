@@ -1,20 +1,74 @@
-__pycache__
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
 *.pyc
 *.pyo
-.venv/
-venv/
-.env
-.env.*
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Testing and coverage
 tests/
+test_*.py
 htmlcov/
 .coverage
+.pytest_cache/
+.tox/
+.hypothesis/
+
+# Development environments
+.venv/
+venv/
+ENV/
+env/
+.env
+.env.*
+.env.local
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 .ruff_cache/
 .mypy_cache/
-*.egg-info/
+
+# Documentation
 docs/
-scripts/
-/pipelines/
-infra/
+*.md
+!requirements.txt
+
+# Git
 .git/
+.gitignore
+.gitattributes
+
+# CI/CD
 .github/
+.gitlab-ci.yml
+
+# Notebooks
+notebooks/
+*.ipynb
+
+# Terraform and infrastructure
+terraform/
+infra/
+*.tfvars
+*.tfstate*
+
+# KFP pipelines (source, not runtime)
+/pipelines/
 *.json.compiled
+
+# Scripts
+scripts/
+
+# Misc
+*.log
+.DS_Store
+Thumbs.db

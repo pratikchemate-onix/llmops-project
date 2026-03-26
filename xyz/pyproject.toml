@@ -1,28 +1,115 @@
+# =============================================================================
+# Ruff Configuration - Formatting and Linting
+# =============================================================================
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+fix = true
+extend-exclude = ["notebooks", "../agent-foundation-main*"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+    "S",   # flake8-bandit (security)
+    "SIM", # flake8-simplify
+    "PTH", # flake8-use-pathlib
+    "RET", # flake8-return
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]  # Allow assert statements in tests
+"scripts/**/*.py" = ["T201"]  # Allow print statements in scripts
+
+# =============================================================================
+# Mypy Configuration - Type Checking
+# =============================================================================
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+# Allow duck-typed mocks in tests
+disable_error_code = ["arg-type"]
+
+[[tool.mypy.overrides]]
+module = [
+    "google.*",
+    "anthropic.*",
+    "kfp.*",
+]
+ignore_missing_imports = true
+
+# =============================================================================
+# Pytest Configuration
+# =============================================================================
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = [
-    "--cov=app",
-    "--cov-report=term-missing",
-    "--cov-report=html:htmlcov",
-    "--cov-fail-under=70",
     "-v",
+    "--strict-markers",
+    "--strict-config",
 ]
-filterwarnings = ["ignore::DeprecationWarning"]
+filterwarnings = [
+    "ignore::pydantic.warnings.PydanticDeprecatedSince212:google.genai.types",
+    "ignore::DeprecationWarning",
+]
 
+# =============================================================================
+# Coverage Configuration
+# =============================================================================
 [tool.coverage.run]
-source = ["app"]
-omit = ["app/services/vector_store.py", "tests/*"]
+source = ["app", "utils", "pipelines"]
+branch = true
+omit = [
+    # Entrypoints and initialization
+    "**/__init__.py",
+    "**/__main__.py",
+    # Main FastAPI app (integration tested via CI/CD)
+    "app/main.py",
+    # Script files (utility scripts)
+    "scripts/**",
+    # Test files
+    "tests/**",
+    # Trigger service (separate deployment)
+    "trigger_service/**",
+    # Vector store (not yet implemented)
+    "app/services/vector_store.py",
+]
 
 [tool.coverage.report]
 show_missing = true
 skip_covered = false
+precision = 2
+fail_under = 80.0  # Start at 80%, increase gradually to 100%
 
-[tool.mypy]
-python_version = "3.11"
-strict = false
-ignore_missing_imports = true
-disallow_untyped_defs = true
-warn_return_any = true
+[tool.coverage.html]
+directory = "htmlcov"

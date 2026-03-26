@@ -154,11 +154,21 @@ class AgentPipeline(BasePipeline):
         from google.adk.runners import Runner
         from google.adk.sessions import InMemorySessionService
 
+        from app.pipelines.callbacks import LoggingCallbacks
+        
+        logging_callbacks = LoggingCallbacks()
+
         agent = Agent(
             name="llmops_agent",
             model=self._get_adk_model_name(),
             instruction=self.system_prompt,
             tools=self.TOOLS,
+            before_agent_callback=logging_callbacks.before_agent,
+            after_agent_callback=logging_callbacks.after_agent,
+            before_model_callback=logging_callbacks.before_model,
+            after_model_callback=logging_callbacks.after_model,
+            before_tool_callback=logging_callbacks.before_tool,
+            after_tool_callback=logging_callbacks.after_tool,
         )
 
         session_service = InMemorySessionService()

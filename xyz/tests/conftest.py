@@ -1,9 +1,15 @@
-"""Shared pytest fixtures for the LLMOps test suite."""
+"""Shared pytest fixtures for the LLMOps test suite.
+
+Provides reusable fixtures and mock objects for testing the LLMOps backend.
+Follows agent-foundation patterns with pytest-mock and typed fixtures.
+"""
 
 from unittest.mock import patch
+from typing import Any, Dict
 
 import pytest
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 
 MOCK_CONFIG = {
     "pipeline": "llm",
