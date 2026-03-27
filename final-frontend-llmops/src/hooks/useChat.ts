@@ -57,6 +57,7 @@ export function useChat() {
           content: response.output,
           timestamp: new Date(),
           metadata: {
+            requestId: response.request_id,
             pipelineExecuted: response.pipeline_executed,
             taskDetection: response.task_detection,
             model,

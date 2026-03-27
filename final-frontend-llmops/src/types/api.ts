@@ -22,6 +22,7 @@ export interface UsageMetrics {
 }
 
 export interface InvokeResponse {
+  request_id: string;
   app_id: AppId;
   user_input: string;
   config: Record<string, unknown>;

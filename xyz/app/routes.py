@@ -1,14 +1,16 @@
 import logging
 import time
+import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 
 from app.orchestrator.router import get_pipeline
-from app.services.logging_service import log_request
+from app.services.logging_service import log_request, log_feedback
 from app.services.task_detector import detect
 from app.services.llm_provider import usage_context
+from app.services.evaluation_service import evaluate_response_async
 from utils.config_loader import load_config
 
 logger = logging.getLogger(__name__)
@@ -34,6 +36,7 @@ class UsageMetrics(BaseModel):
 
 
 class InvokeResponse(BaseModel):
+    request_id: str
     app_id: str
     user_input: str
     config: dict[str, Any]
@@ -44,10 +47,28 @@ class InvokeResponse(BaseModel):
     usage: UsageMetrics
 
 
+class FeedbackRequest(BaseModel):
+    request_id: str
+    score: int
+    comment: str | None = None
+
+
+@router.post("/feedback")
+async def submit_feedback(request: FeedbackRequest):
+    """Endpoint for users to submit thumbs up/down and comments for a specific AI response."""
+    try:
+        log_feedback(request.request_id, request.score, request.comment)
+        return {"status": "success", "message": "Feedback logged."}
+    except Exception as e:
+        logger.error(f"Failed to log feedback: {e}")
+        raise HTTPException(status_code=500, detail="Failed to log feedback")
+
+
 @router.post("/invoke", response_model=InvokeResponse)
-async def invoke_pipeline(request: InvokeRequest) -> InvokeResponse:
+async def invoke_pipeline(request: InvokeRequest, background_tasks: BackgroundTasks) -> InvokeResponse:
     start_time = time.time()
-    logger.info(f"Received invoke request for app_id={request.app_id}")
+    request_id = str(uuid.uuid4())
+    logger.info(f"Received invoke request {request_id} for app_id={request.app_id}")
     
     # Reset usage context for this new request lifecycle
     usage_context.set({"prompt_tokens": 0, "completion_tokens": 0, "total_cost": 0.0})
@@ -122,6 +143,7 @@ async def invoke_pipeline(request: InvokeRequest) -> InvokeResponse:
         pipeline_name = type(pipeline).__name__.replace("Pipeline", "").lower()
         try:
             log_request(
+                request_id=request_id,
                 app_id=request.app_id,
                 user_input=request.user_input,
                 output=output_text,
@@ -136,8 +158,20 @@ async def invoke_pipeline(request: InvokeRequest) -> InvokeResponse:
         except Exception as e:
             # Don't fail the request if logging fails, but log the error
             logger.error(f"Logging service failed: {e}")
+            
+        # 6. Background Evaluation
+        # Send to eval asynchronously so it doesn't block the user's response
+        eval_model = config.get("active_model", "gemini-2.5-flash")
+        background_tasks.add_task(
+            evaluate_response_async,
+            request_id=request_id,
+            user_input=request.user_input,
+            output=output_text,
+            model_name=eval_model
+        )
 
         return InvokeResponse(
+            request_id=request_id,
             app_id=request.app_id,
             user_input=request.user_input,
             config=config,

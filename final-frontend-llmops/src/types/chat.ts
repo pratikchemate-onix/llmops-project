@@ -7,6 +7,7 @@ export interface ChatMessage {
   timestamp: Date;
   // Only present on assistant messages (populated from InvokeResponse)
   metadata?: {
+    requestId?: string;
     pipelineExecuted: PipelineType;
     taskDetection: TaskDetection;
     model: string;

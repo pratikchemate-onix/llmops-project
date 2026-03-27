@@ -8,6 +8,7 @@ import argparse
 from google.cloud import bigquery
 
 SCHEMA_REQUESTS = [
+    bigquery.SchemaField("request_id", "STRING", mode="REQUIRED"),
     bigquery.SchemaField("timestamp", "TIMESTAMP", mode="REQUIRED"),
     bigquery.SchemaField("app_id", "STRING", mode="REQUIRED"),
     bigquery.SchemaField("session_id", "STRING", mode="NULLABLE"),
@@ -23,6 +24,24 @@ SCHEMA_REQUESTS = [
     bigquery.SchemaField("needs_agent", "BOOLEAN", mode="NULLABLE"),
     bigquery.SchemaField("retrieved_chunks", "INTEGER", mode="NULLABLE"),
     bigquery.SchemaField("guardrail_pass", "BOOLEAN", mode="NULLABLE"),
+    bigquery.SchemaField("prompt_tokens", "INTEGER", mode="NULLABLE"),
+    bigquery.SchemaField("completion_tokens", "INTEGER", mode="NULLABLE"),
+    bigquery.SchemaField("total_cost", "FLOAT", mode="NULLABLE"),
+]
+
+SCHEMA_FEEDBACK = [
+    bigquery.SchemaField("request_id", "STRING", mode="REQUIRED"),
+    bigquery.SchemaField("timestamp", "TIMESTAMP", mode="REQUIRED"),
+    bigquery.SchemaField("score", "INTEGER", mode="REQUIRED"),
+    bigquery.SchemaField("comment", "STRING", mode="NULLABLE"),
+]
+
+SCHEMA_EVALUATIONS_NEW = [
+    bigquery.SchemaField("request_id", "STRING", mode="REQUIRED"),
+    bigquery.SchemaField("timestamp", "TIMESTAMP", mode="REQUIRED"),
+    bigquery.SchemaField("criteria", "STRING", mode="REQUIRED"),
+    bigquery.SchemaField("score", "FLOAT", mode="REQUIRED"),
+    bigquery.SchemaField("reasoning", "STRING", mode="NULLABLE"),
 ]
 
 SCHEMA_EVALUATION = [
@@ -69,6 +88,8 @@ def create_tables(project_id: str) -> None:
 
     tables = {
         "requests": SCHEMA_REQUESTS,
+        "feedback": SCHEMA_FEEDBACK,
+        "evaluations": SCHEMA_EVALUATIONS_NEW,
         "evaluation_results": SCHEMA_EVALUATION,
         "experiments": SCHEMA_EXPERIMENTS,
     }

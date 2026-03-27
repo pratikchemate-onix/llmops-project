@@ -33,6 +33,7 @@ class TestLoggingService:
         # Environment variable needed to trigger BQ path
         with patch.dict("os.environ", {"BIGQUERY_PROJECT": "test-project"}):
             app.services.logging_service.log_request(
+                request_id="req-123",
                 app_id="test_app",
                 user_input="hello",
                 output="world",
@@ -67,7 +68,8 @@ class TestLoggingService:
         with patch("app.services.logging_service.logger") as mock_logger:
             with patch.dict("os.environ", {"BIGQUERY_PROJECT": "test-project"}):
                 app.services.logging_service.log_request(
-                    app_id="test_app",
+                    request_id="req-123",
+                app_id="test_app",
                     user_input="hello",
                     output="world",
                     pipeline_executed="llm",
@@ -88,7 +90,8 @@ class TestLoggingService:
         with patch("app.services.logging_service.logger") as mock_logger:
             with patch.dict("os.environ", {}, clear=True):
                 app.services.logging_service.log_request(
-                    app_id="test_app",
+                    request_id="req-123",
+                app_id="test_app",
                     user_input="hello",
                     output="world",
                     pipeline_executed="llm",

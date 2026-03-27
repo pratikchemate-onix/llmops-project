@@ -11,25 +11,22 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _BQ_CLIENT = None
-_BQ_TABLE = None
 
-
-def _get_bq_client() -> tuple[Any, str | None]:
-    global _BQ_CLIENT, _BQ_TABLE
-    if _BQ_CLIENT is None:
-        project = os.getenv("BIGQUERY_PROJECT")
-        if project:
-            try:
-                from google.cloud import bigquery  # type: ignore
-
-                _BQ_CLIENT = bigquery.Client(project=project)
-                _BQ_TABLE = f"{project}.llmops.requests"
-            except Exception as e:
-                logger.warning(f"BigQuery init failed: {e}. Using stdout logging.")
-    return _BQ_CLIENT, _BQ_TABLE
+def _get_bq_client() -> tuple[Any, str]:
+    global _BQ_CLIENT
+    project = os.getenv("BIGQUERY_PROJECT")
+    if _BQ_CLIENT is None and project:
+        try:
+            from google.cloud import bigquery  # type: ignore
+            _BQ_CLIENT = bigquery.Client(project=project)
+        except Exception as e:
+            logger.warning(f"BigQuery init failed: {e}. Using stdout logging.")
+    
+    return _BQ_CLIENT, project or ""
 
 
 def log_request(
+    request_id: str,
     app_id: str,
     user_input: str,
     output: str,
@@ -42,17 +39,16 @@ def log_request(
     guardrail_pass: bool | None = None,
     usage: dict | None = None,
 ) -> None:
-    """Log a completed invoke request to BigQuery (or stdout as fallback)."""
-
+    """Log a completed invoke request to BigQuery."""
     usage = usage or {}
-    
     now = datetime.now(timezone.utc)
     row = {
+        "request_id": request_id,
         "timestamp": now.isoformat(),
         "app_id": app_id,
         "session_id": session_id,
-        "user_input": user_input[:2000],  # cap at 2000 chars
-        "output": output[:4000],  # cap at 4000 chars
+        "user_input": user_input[:2000],
+        "output": output[:4000],
         "pipeline_executed": pipeline_executed,
         "model": str(config.get("active_model", config.get("model", "unknown"))),
         "prompt_version": str(config.get("active_prompt_version", "unknown")),
@@ -68,21 +64,65 @@ def log_request(
         "total_cost": float(usage.get("total_cost", 0.0)),
     }
 
-    client, table = _get_bq_client()
-
-    if client and table:
+    client, project = _get_bq_client()
+    if client and project:
         try:
-            # client is Any, but mypy might infer it as None from global init
-            bq_client: Any = client
-            errors = bq_client.insert_rows_json(table, [row])
+            table = f"{project}.llmops.requests"
+            errors = client.insert_rows_json(table, [row])
             if errors:
                 logger.error(f"BigQuery insert errors: {errors}")
         except Exception as e:
             logger.error(f"BigQuery insert failed: {e}")
-            _log_to_stdout(row)
+            _log_to_stdout("INVOKE", row)
     else:
-        _log_to_stdout(row)
+        _log_to_stdout("INVOKE", row)
 
+def log_evaluation(request_id: str, criteria: str, score: float, reasoning: str) -> None:
+    """Log an automated evaluation of a request."""
+    now = datetime.now(timezone.utc)
+    row = {
+        "request_id": request_id,
+        "timestamp": now.isoformat(),
+        "criteria": criteria,
+        "score": score,
+        "reasoning": reasoning[:2000],
+    }
+    
+    client, project = _get_bq_client()
+    if client and project:
+        try:
+            table = f"{project}.llmops.evaluations"
+            errors = client.insert_rows_json(table, [row])
+            if errors:
+                logger.error(f"BQ evaluation insert errors: {errors}")
+        except Exception as e:
+            logger.error(f"BQ evaluation insert failed: {e}")
+            _log_to_stdout("EVAL", row)
+    else:
+        _log_to_stdout("EVAL", row)
 
-def _log_to_stdout(row: dict) -> None:
-    logger.info(f"INVOKE_LOG: {json.dumps(row)}")
+def log_feedback(request_id: str, score: int, comment: str | None) -> None:
+    """Log user feedback for a request."""
+    now = datetime.now(timezone.utc)
+    row = {
+        "request_id": request_id,
+        "timestamp": now.isoformat(),
+        "score": score,
+        "comment": (comment[:1000] if comment else None),
+    }
+    
+    client, project = _get_bq_client()
+    if client and project:
+        try:
+            table = f"{project}.llmops.feedback"
+            errors = client.insert_rows_json(table, [row])
+            if errors:
+                logger.error(f"BQ feedback insert errors: {errors}")
+        except Exception as e:
+            logger.error(f"BQ feedback insert failed: {e}")
+            _log_to_stdout("FEEDBACK", row)
+    else:
+        _log_to_stdout("FEEDBACK", row)
+
+def _log_to_stdout(tag: str, row: dict) -> None:
+    logger.info(f"{tag}_LOG: {json.dumps(row)}")
