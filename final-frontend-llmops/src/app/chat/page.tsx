@@ -183,13 +183,24 @@ export default function ChatPage() {
                     {msg.metadata.model}
                   </span>
 
-                  {/* Latency Badge */}
-                  <span className="px-2 py-0.5 text-[10px] rounded-full bg-green-900/50 text-green-400 border border-green-800">
-                    {msg.metadata.latencyMs.toFixed(0)}ms
-                  </span>
-
-                  {/* Task Chips */}
-                  {msg.metadata.taskDetection.needs_rag && (
+                                      {/* Latency Badge */}
+                                      <span className="px-2 py-0.5 text-[10px] rounded-full bg-green-900/50 text-green-400 border border-green-800">
+                                        {msg.metadata.latencyMs.toFixed(0)}ms
+                                      </span>
+                  
+                                      {/* Usage & Cost Badges */}
+                                      {msg.metadata.usage && (
+                                        <>
+                                          <span className="px-2 py-0.5 text-[10px] rounded-full bg-blue-900/50 text-blue-400 border border-blue-800">
+                                            {msg.metadata.usage.prompt_tokens + msg.metadata.usage.completion_tokens} tokens
+                                          </span>
+                                          <span className="px-2 py-0.5 text-[10px] rounded-full bg-amber-900/50 text-amber-400 border border-amber-800">
+                                            ${msg.metadata.usage.total_cost.toFixed(6)}
+                                          </span>
+                                        </>
+                                      )}
+                  
+                                      {/* Task Chips */}                  {msg.metadata.taskDetection.needs_rag && (
                     <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-yellow-600/20 text-yellow-500 border border-yellow-600/40">
                       RAG
                     </span>
