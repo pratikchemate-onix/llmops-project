@@ -1,6 +1,6 @@
 """Reusable KFP components for RAG operations."""
 
-from datetime import timezone, datetime
+from datetime import datetime, timezone
 
 from kfp import dsl
 

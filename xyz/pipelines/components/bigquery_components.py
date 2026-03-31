@@ -1,7 +1,7 @@
 """Reusable KFP components for BigQuery operations."""
 
 import json
-from datetime import timezone, datetime
+from datetime import datetime, timezone
 
 from google.cloud import bigquery, storage
 from kfp import dsl
