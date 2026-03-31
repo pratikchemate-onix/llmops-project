@@ -27,6 +27,7 @@ Architecture:
 import argparse
 import os
 from datetime import timezone
+UTC = timezone.utc
 
 import google.cloud.aiplatform as aip
 from kfp import compiler, dsl
@@ -218,7 +219,7 @@ Response B ({model_b_name}): {rb["response"][:500]}"""
         model_a_name if avg_a > avg_b else (model_b_name if avg_b > avg_a else "tie")
     )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Write to BigQuery
     bq = bigquery.Client(project=project_id)

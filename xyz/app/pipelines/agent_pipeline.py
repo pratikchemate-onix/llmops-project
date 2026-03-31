@@ -5,8 +5,8 @@ ADK manages the think → act → observe loop automatically.
 
 import logging
 import os
-from typing import Any
 from datetime import datetime
+from typing import Any
 
 from app.pipelines.base import BasePipeline
 from app.services import llm_provider
@@ -116,7 +116,7 @@ class AgentPipeline(BasePipeline):
     def __init__(self, config: dict[str, Any]) -> None:
         super().__init__(config)
         self.max_iterations = int(config.get("max_iterations", 5))
-        
+
         base_prompt = config.get(
             "system_prompt",
             "You are an expert assistant. Use available tools when needed. Think step by step.",

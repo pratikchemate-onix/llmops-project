@@ -15,6 +15,7 @@ Usage:
 
 import os
 from datetime import timezone
+UTC = timezone.utc
 
 from kfp import dsl
 
@@ -175,7 +176,7 @@ def write_experiment_and_promote(
     from google.cloud import bigquery, firestore
 
     comparison = json.loads(comparison_json)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Write to BigQuery
     bq = bigquery.Client(project=project_id)

@@ -1,6 +1,7 @@
 """Reusable KFP components for LLM operations (judge scoring, model calls)."""
 
 from datetime import timezone
+UTC = timezone.utc
 
 from kfp import dsl
 
@@ -160,7 +161,7 @@ def update_active_config(
             best_version = p.id
 
     if best_version:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         config_ref.update({"active_prompt_version": best_version, "updated_at": now})
         config_ref.collection("prompts").document(current_version).update(
             {"status": "retired"}

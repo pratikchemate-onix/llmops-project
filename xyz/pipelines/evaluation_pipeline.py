@@ -13,6 +13,7 @@ Deploy with:
 
 import os
 from datetime import timezone
+UTC = timezone.utc
 
 import google.cloud.aiplatform as aip
 from kfp import dsl
@@ -169,7 +170,7 @@ def write_scores_to_bigquery(
 
     client = bigquery.Client(project=project_id)
     table = f"{project_id}.llmops.evaluation_results"
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
 
     rows = []
     for row in scored:
@@ -252,7 +253,7 @@ def update_config_if_needed(
         config_ref.update(
             {
                 "active_prompt_version": best_version,
-                "updated_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(UTC),
             }
         )
         # Mark old as retired, new as active

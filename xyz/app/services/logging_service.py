@@ -8,6 +8,8 @@ import os
 from datetime import datetime, timezone
 from typing import Any
 
+UTC = timezone.utc
+
 logger = logging.getLogger(__name__)
 
 _BQ_CLIENT = None
@@ -21,7 +23,7 @@ def _get_bq_client() -> tuple[Any, str]:
             _BQ_CLIENT = bigquery.Client(project=project)
         except Exception as e:
             logger.warning(f"BigQuery init failed: {e}. Using stdout logging.")
-    
+
     return _BQ_CLIENT, project or ""
 
 
@@ -41,7 +43,7 @@ def log_request(
 ) -> None:
     """Log a completed invoke request to BigQuery."""
     usage = usage or {}
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     row = {
         "request_id": request_id,
         "timestamp": now.isoformat(),
@@ -79,7 +81,7 @@ def log_request(
 
 def log_evaluation(request_id: str, criteria: str, score: float, reasoning: str) -> None:
     """Log an automated evaluation of a request."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     row = {
         "request_id": request_id,
         "timestamp": now.isoformat(),
@@ -87,7 +89,7 @@ def log_evaluation(request_id: str, criteria: str, score: float, reasoning: str)
         "score": score,
         "reasoning": reasoning[:2000],
     }
-    
+
     client, project = _get_bq_client()
     if client and project:
         try:
@@ -103,14 +105,14 @@ def log_evaluation(request_id: str, criteria: str, score: float, reasoning: str)
 
 def log_feedback(request_id: str, score: int, comment: str | None) -> None:
     """Log user feedback for a request."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     row = {
         "request_id": request_id,
         "timestamp": now.isoformat(),
         "score": score,
         "comment": (comment[:1000] if comment else None),
     }
-    
+
     client, project = _get_bq_client()
     if client and project:
         try:

@@ -1,13 +1,15 @@
+
 import pytest
-from pathlib import Path
 import yaml
+
 from app.services.prompt_manager import PromptManager
+
 
 @pytest.fixture
 def temp_prompts_dir(tmp_path):
     prompts_dir = tmp_path / "prompts"
     prompts_dir.mkdir()
-    
+
     # Create a mock prompt
     test_prompt = {
         "name": "test_prompt",
@@ -21,10 +23,10 @@ def temp_prompts_dir(tmp_path):
             }
         }
     }
-    
+
     with open(prompts_dir / "test_prompt.yaml", "w") as f:
         yaml.dump(test_prompt, f)
-        
+
     return prompts_dir
 
 def test_prompt_manager_loads_active_version_by_default(temp_prompts_dir):

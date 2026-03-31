@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+
 from app.services.prompt_manager import prompt_manager
 
 logger = logging.getLogger(__name__)
@@ -24,16 +25,16 @@ def detect(user_input: str, model: str) -> dict:
         # This ensures we go through LiteLLM and respect whatever provider the user has configured,
         # while defaulting to a fast/cheap model (like gemini-2.5-flash) for classification.
         from app.services import llm_provider
-        
+
         prompt_template = prompt_manager.get_prompt("task_detector")
         prompt = prompt_template.format(user_input=user_input)
 
-        logger.info(f"TaskDetector: analyzing input with fast classifier model (defaulting to gemini-2.5-flash)")
-        
-        # We can safely use gemini-2.5-flash if GOOGLE_CLOUD_PROJECT is set, 
+        logger.info("TaskDetector: analyzing input with fast classifier model (defaulting to gemini-2.5-flash)")
+
+        # We can safely use gemini-2.5-flash if GOOGLE_CLOUD_PROJECT is set,
         # otherwise we should fallback to whatever model they passed in.
         classifier_model = "gemini-2.5-flash" if os.getenv("GOOGLE_CLOUD_PROJECT") else model
-        
+
         raw = llm_provider.generate(prompt=prompt, model=classifier_model).strip()
         logger.debug(f"TaskDetector: raw response: {raw}")
 

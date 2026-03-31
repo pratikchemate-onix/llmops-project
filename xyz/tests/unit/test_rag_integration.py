@@ -11,10 +11,10 @@ def setup_vertex_mock():
     mock_vertex = MagicMock()
     mock_preview = MagicMock()
     mock_rag = MagicMock()
-    
+
     mock_preview.rag = mock_rag
     mock_vertex.preview = mock_preview
-    
+
     with patch.dict(
         sys.modules,
         {
@@ -103,18 +103,18 @@ class TestRAGContextRetrieval:
     @patch.dict(os.environ, {"GOOGLE_CLOUD_PROJECT": "test-project"})
     def test_retrieve_context_success(self, setup_vertex_mock):
         from app.pipelines.rag_pipeline import RAGPipeline
-        
+
         mock_context1 = MagicMock()
         mock_context1.source_uri = "gs://doc1.pdf"
         mock_context1.text = "content 1"
-        
+
         mock_response = MagicMock()
         mock_response.contexts.contexts = [mock_context1]
         setup_vertex_mock["rag"].retrieval_query.return_value = mock_response
 
         pipeline = RAGPipeline({"active_model": "gemini-pro", "rag_corpus_id": "test", "top_k": 1})
         context, num_chunks = pipeline._retrieve_context("query")
-        
+
         assert num_chunks == 1
         assert "content 1" in context
 
@@ -146,7 +146,7 @@ class TestRAGPipelineExecution:
     @patch("app.pipelines.rag_pipeline.llm_provider.generate")
     def test_execute_with_context(self, mock_generate, setup_vertex_mock):
         from app.pipelines.rag_pipeline import RAGPipeline
-        
+
         mock_context = MagicMock()
         mock_context.source_uri = "gs://doc.pdf"
         mock_context.text = "12 weeks."
@@ -157,7 +157,7 @@ class TestRAGPipelineExecution:
 
         pipeline = RAGPipeline({"active_model": "gemini-pro", "rag_corpus_id": "test"})
         result, num_chunks = pipeline.execute("query")
-        
+
         assert "12 weeks" in result
         mock_generate.assert_called_once()
 
@@ -165,7 +165,7 @@ class TestRAGPipelineExecution:
     @patch("app.pipelines.rag_pipeline.llm_provider.generate")
     def test_execute_no_context_found(self, mock_generate, setup_vertex_mock):
         from app.pipelines.rag_pipeline import RAGPipeline
-        
+
         mock_response = MagicMock()
         mock_response.contexts.contexts = []
         setup_vertex_mock["rag"].retrieval_query.return_value = mock_response
@@ -180,7 +180,7 @@ class TestRAGPipelineExecution:
     def test_execute_rag_not_configured(self, mock_generate, setup_vertex_mock):
         from app.pipelines.rag_pipeline import RAGPipeline
         mock_generate.return_value = "No info."
-        
+
         pipeline = RAGPipeline({"active_model": "gemini-pro", "rag_corpus_id": ""})
         result, num_chunks = pipeline.execute("query")
         assert isinstance(result, str)

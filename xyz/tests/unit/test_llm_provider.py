@@ -1,11 +1,11 @@
 import os
-import sys
 from unittest.mock import MagicMock, patch
 
-import pytest
 import litellm
+import pytest
 
 import app.services.llm_provider as provider
+
 
 @pytest.fixture(autouse=True)
 def reset_globals():
@@ -20,7 +20,7 @@ def mock_litellm():
     mock_response = MagicMock()
     mock_response.choices = [MagicMock()]
     mock_response.choices[0].message.content = "litellm response"
-    
+
     with patch("app.services.llm_provider.litellm.completion") as mock_completion:
         mock_completion.return_value = mock_response
         yield mock_completion
@@ -65,7 +65,7 @@ def test_generate_gemini_missing_project_id_raises_runtime_error(mock_litellm):
 def test_generate_claude_model_succeeds(mock_litellm):
     """Test that the Claude provider can be called successfully via litellm."""
     response = provider.generate("test prompt", "claude-3-opus-20240229")
-    
+
     assert response == "litellm response"
     mock_litellm.assert_called_with(
         model="claude-3-opus-20240229",
@@ -79,7 +79,7 @@ def test_generate_authentication_error():
     with patch("app.services.llm_provider.litellm.completion") as mock_completion:
         # litellm 1.0.0+ requires model, message and llm_provider
         mock_completion.side_effect = litellm.AuthenticationError(message="invalid x-api-key", llm_provider="anthropic", model="claude-3-opus")
-        
+
         with pytest.raises(RuntimeError, match="Authentication failed for claude"):
             provider.generate("test prompt", "claude-3-opus-20240229")
 
@@ -87,6 +87,6 @@ def test_generate_general_exception():
     """Test that a general Exception is handled correctly."""
     with patch("app.services.llm_provider.litellm.completion") as mock_completion:
         mock_completion.side_effect = Exception("General API error")
-        
+
         with pytest.raises(RuntimeError, match="LLM call failed for claude"):
             provider.generate("test prompt", "claude-3-opus-20240229")

@@ -3,15 +3,15 @@ import time
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 
 from app.orchestrator.router import get_pipeline
-from app.services.logging_service import log_request, log_feedback
-from app.services.task_detector import detect
-from app.services.llm_provider import usage_context
 from app.services.evaluation_service import evaluate_response_async
 from app.services.guardrails_service import guardrails
+from app.services.llm_provider import usage_context
+from app.services.logging_service import log_feedback, log_request
+from app.services.task_detector import detect
 from utils.config_loader import load_config
 
 logger = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ async def submit_feedback(request: FeedbackRequest):
         return {"status": "success", "message": "Feedback logged."}
     except Exception as e:
         logger.error(f"Failed to log feedback: {e}")
-        raise HTTPException(status_code=500, detail="Failed to log feedback")
+        raise HTTPException(status_code=500, detail="Failed to log feedback") from e
 
 
 @router.post("/invoke", response_model=InvokeResponse)
@@ -70,7 +70,7 @@ async def invoke_pipeline(request: InvokeRequest, background_tasks: BackgroundTa
     start_time = time.time()
     request_id = str(uuid.uuid4())
     logger.info(f"Received invoke request {request_id} for app_id={request.app_id}")
-    
+
     # Reset usage context for this new request lifecycle
     usage_context.set({"prompt_tokens": 0, "completion_tokens": 0, "total_cost": 0.0})
 
@@ -145,7 +145,7 @@ async def invoke_pipeline(request: InvokeRequest, background_tasks: BackgroundTa
 
         # Calculate latency
         latency_ms = (time.time() - start_time) * 1000
-        
+
         # Get tracked usage
         current_usage = usage_context.get()
 
@@ -168,7 +168,7 @@ async def invoke_pipeline(request: InvokeRequest, background_tasks: BackgroundTa
         except Exception as e:
             # Don't fail the request if logging fails, but log the error
             logger.error(f"Logging service failed: {e}")
-            
+
         # 6. Background Evaluation
         # Send to eval asynchronously so it doesn't block the user's response
         eval_model = config.get("active_model", "gemini-2.5-flash")

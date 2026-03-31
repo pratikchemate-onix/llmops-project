@@ -1,9 +1,10 @@
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from app.services.task_detector import detect
+
 
 @pytest.fixture
 def mock_llm_provider():

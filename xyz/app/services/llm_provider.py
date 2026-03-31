@@ -6,18 +6,21 @@ API keys are handled by litellm via standard environment variables
 Google Application Default Credentials (ADC) are still used for Vertex AI.
 """
 
+import contextvars
 import logging
 import os
-import contextvars
+from datetime import timezone
 
 import litellm
+
+UTC = timezone.utc
 
 logger = logging.getLogger(__name__)
 
 # Context variable to store usage across multiple calls in a single request lifecycle
-usage_context = contextvars.ContextVar(
-    "usage_context", 
-    default={"prompt_tokens": 0, "completion_tokens": 0, "total_cost": 0.0}
+usage_context: contextvars.ContextVar[dict[str, float] | None] = contextvars.ContextVar(
+    "usage_context",
+    default=None
 )
 
 # Enable opentelemetry tracing
@@ -115,9 +118,11 @@ def generate(prompt: str, model: str) -> str:
             kwargs["vertex_location"] = "global"
 
         response = litellm.completion(**kwargs)
-        
+
         # Track usage synchronously to avoid thread contextvar issues
-        usage = dict(usage_context.get())
+        current_usage = usage_context.get()
+        usage = dict(current_usage) if current_usage is not None else {"prompt_tokens": 0, "completion_tokens": 0, "total_cost": 0.0}
+
         if hasattr(response, "usage") and response.usage:
             usage["prompt_tokens"] += getattr(response.usage, "prompt_tokens", 0)
             usage["completion_tokens"] += getattr(response.usage, "completion_tokens", 0)
