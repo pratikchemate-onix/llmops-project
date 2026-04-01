@@ -75,7 +75,7 @@ resource "google_project_iam_member" "app" {
 
 resource "google_sql_database_instance" "sessions" {
   name             = "${local.resource_name}-sessions"
-  database_version = "POSTGRES_17" # Changed from POSTGRES_18 - not yet GA in all regions
+  database_version = "POSTGRES_18" # Reverting to POSTGRES_18 - instance already exists with this version
   region           = var.region
 
   # ref: https://docs.cloud.google.com/sql/docs/postgres/machine-series-overview
