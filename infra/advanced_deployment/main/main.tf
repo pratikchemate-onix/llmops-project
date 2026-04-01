@@ -75,7 +75,7 @@ resource "google_project_iam_member" "app" {
 
 resource "google_sql_database_instance" "sessions" {
   name             = "${local.resource_name}-sessions"
-  database_version = "POSTGRES_17"  # Changed from POSTGRES_18 - not yet GA in all regions
+  database_version = "POSTGRES_17" # Changed from POSTGRES_18 - not yet GA in all regions
   region           = var.region
 
   # ref: https://docs.cloud.google.com/sql/docs/postgres/machine-series-overview
@@ -164,7 +164,7 @@ resource "google_cloud_run_v2_service" "app" {
 
       ports {
         name           = "http1"
-        container_port = 8080  # Changed from 8000 to match app's actual port
+        container_port = 8080 # Changed from 8000 to match app's actual port
       }
 
       resources {
@@ -184,7 +184,7 @@ resource "google_cloud_run_v2_service" "app" {
         period_seconds        = 20
         http_get {
           path = "/"  # Changed from /health - app's health endpoint is at root
-          port = 8080  # Changed from 8000 to match app's actual port
+          port = 8080 # Changed from 8000 to match app's actual port
         }
       }
 
