@@ -1,6 +1,7 @@
 import type { AppId, InvokeRequest, InvokeResponse, HealthResponse } from "@/types/api";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// Use Next.js same-origin proxy path to avoid browser CORS issues.
+const BASE_URL = "/api/backend";
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
