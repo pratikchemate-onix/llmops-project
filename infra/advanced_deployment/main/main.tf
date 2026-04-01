@@ -218,9 +218,10 @@ resource "google_cloud_run_v2_service" "app" {
           path = "/readiness"
           port = 9090
         }
-        initial_delay_seconds = 10
-        period_seconds        = 10
-        failure_threshold     = 5
+        initial_delay_seconds = 20 # Increased from 10 to allow more startup time
+        period_seconds        = 15 # Increased from 10 to reduce check frequency
+        failure_threshold     = 8  # Increased from 5 to allow more retries
+        timeout_seconds       = 3  # Added timeout for probe request
       }
     }
 
