@@ -164,7 +164,7 @@ resource "google_cloud_run_v2_service" "app" {
 
       ports {
         name           = "http1"
-        container_port = 8000
+        container_port = 8080  # Changed from 8000 to match app's actual port
       }
 
       resources {
@@ -183,8 +183,8 @@ resource "google_cloud_run_v2_service" "app" {
         timeout_seconds       = 15
         period_seconds        = 20
         http_get {
-          path = "/health"
-          port = 8000
+          path = "/"  # Changed from /health - app's health endpoint is at root
+          port = 8080  # Changed from 8000 to match app's actual port
         }
       }
 
