@@ -43,15 +43,19 @@ _MODEL_MAP = {
     "mock": "mock",
 
     # Gemini (via Vertex AI)
-    "gemini": "vertex_ai/gemini-2.5-flash",
-    "gemini-2.5-flash": "vertex_ai/gemini-2.5-flash",
+    "gemini": "vertex_ai/gemini-2.0-flash-001",
     "gemini-2.0-flash": "vertex_ai/gemini-2.0-flash-001",
-    "gemini-2.5-flash-lite": "vertex_ai/gemini-2.5-flash-lite",
-    "gemini-3-flash-preview": "vertex_ai/gemini-3-flash-preview",
-    "gemini-3-pro-preview": "vertex_ai/gemini-3-pro-preview",
-    "gemini-3.1-flash-preview": "vertex_ai/gemini-3.1-flash-preview",
-    "gemini-3.1-pro-preview": "vertex_ai/gemini-3.1-pro-preview",
-    "gemini-3.1-flash-lite-preview": "vertex_ai/gemini-3.1-flash-lite-preview",
+    "gemini-2.0-flash-exp": "vertex_ai/gemini-2.0-flash-exp",
+    "gemini-2.5-flash": "vertex_ai/gemini-2.0-flash-001",  # Map to 2.0 until 2.5 is available
+    "gemini-flash": "vertex_ai/gemini-2.0-flash-001",
+    "gemini-pro": "vertex_ai/gemini-1.5-pro",
+
+    # Gemini 3.x models (experimental - may not be available in all projects)
+    # Uncomment when these models become publicly available or if your project has access
+    # "gemini-3-flash-preview": "vertex_ai/gemini-3-flash-preview",
+    # "gemini-3-pro-preview": "vertex_ai/gemini-3-pro-preview",
+    # "gemini-3.1-flash-preview": "vertex_ai/gemini-3.1-flash-preview",
+    # "gemini-3.1-pro-preview": "vertex_ai/gemini-3.1-pro-preview",
 
     # Claude
     "claude": "claude-3-opus-20240229",
@@ -105,8 +109,6 @@ def generate(prompt: str, model: str) -> str:
     logger.info(f"LLMProvider: calling model {model_id} with prompt length {len(prompt)}")
 
     try:
-        # Gemini 3.0 models currently require the region to be explicitly set to global
-        # or us-central1 depending on the exact model. Usually "global" is needed for previews.
         kwargs = {
             "model": model_id,
             "messages": [{"role": "user", "content": prompt}],
@@ -114,6 +116,8 @@ def generate(prompt: str, model: str) -> str:
             "max_tokens": 2048,
         }
 
+        # Gemini 3.x preview models (when available) require vertex_location="global"
+        # instead of the default us-central1
         if "gemini-3" in model_id:
             kwargs["vertex_location"] = "global"
 
