@@ -206,6 +206,7 @@ resource "google_cloud_run_v2_service" "app" {
         "--auto-iam-authn",
         "--health-check",
         "--http-port=9090",
+        "--http-address=0.0.0.0",
         "--structured-logs",
         "--exit-zero-on-sigterm",
       ]
