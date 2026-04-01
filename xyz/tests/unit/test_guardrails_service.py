@@ -60,3 +60,37 @@ def test_validate_input_llm_injection_safe(mock_get_prompt, mock_generate):
     is_safe, msg = guardrails.validate_input("A normal question")
     assert is_safe is True
     assert msg == ""
+
+@patch("app.services.guardrails_service.generate")
+@patch("app.services.guardrails_service.prompt_manager.get_prompt")
+def test_validate_input_llm_check_fails_gracefully(mock_get_prompt, mock_generate):
+    """If LLM check fails, should fallback to allowing input (fail open)."""
+    guardrails = GuardrailsService(use_llm_guard=True)
+    mock_get_prompt.return_value = "Detection prompt for {user_input}"
+    mock_generate.side_effect = Exception("API error")
+
+    # Should not raise, should fallback to allowing the input
+    is_safe, msg = guardrails.validate_input("Some input")
+    assert is_safe is True  # Fails open for availability
+
+def test_filter_output_multiple_pii_types(guardrails):
+    """Should handle multiple PII types in single output."""
+    output = "Call 123-45-6789 or email test@example.com for card 4532-1111-2222-3333"
+    filtered = guardrails.filter_output(output)
+    assert "123-45-6789" not in filtered
+    assert "test@example.com" not in filtered
+    assert "[REDACTED SSN]" in filtered
+    assert "[REDACTED EMAIL]" in filtered
+
+def test_filter_output_no_pii(guardrails):
+    """Should return unchanged output if no PII detected."""
+    output = "This is a safe message with no sensitive data."
+    filtered = guardrails.filter_output(output)
+    assert filtered == output
+
+def test_filter_output_credit_card(guardrails):
+    """Should mask credit card numbers."""
+    output = "Card number: 4532111122223333"
+    filtered = guardrails.filter_output(output)
+    assert "4532111122223333" not in filtered
+    assert "[REDACTED CREDIT_CARD]" in filtered

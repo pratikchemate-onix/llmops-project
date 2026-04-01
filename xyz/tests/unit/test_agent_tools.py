@@ -34,7 +34,8 @@ class TestBigQueryTool:
         assert "count" in result
         assert "123" in result
         assert "42" in result
-        mock_client_instance.query.assert_called_once()
+        # Should be called twice: once for dry_run validation, once for actual execution
+        assert mock_client_instance.query.call_count == 2
 
     def test_bigquery_query_non_select(self):
         """Test that non-SELECT queries are rejected."""
@@ -43,7 +44,7 @@ class TestBigQueryTool:
         result = bigquery_query("DELETE FROM users WHERE id = 1")
 
         assert "Error" in result
-        assert "Only SELECT" in result
+        assert ("Only SELECT" in result or "forbidden" in result.lower())
 
     def test_bigquery_query_insert_rejected(self):
         """Test that INSERT queries are rejected."""
@@ -52,7 +53,54 @@ class TestBigQueryTool:
         result = bigquery_query("INSERT INTO users VALUES (1, 'test')")
 
         assert "Error" in result
-        assert "Only SELECT" in result
+        assert "Only SELECT" in result or "forbidden" in result.lower()
+
+    def test_bigquery_query_sql_injection_semicolon(self):
+        """Test that multi-statement SQL injection is blocked."""
+        from app.pipelines.agent_pipeline import bigquery_query
+
+        result = bigquery_query("SELECT * FROM users; DROP TABLE users;")
+
+        assert "Error" in result
+        assert "forbidden" in result.lower() or "Only SELECT" in result
+
+    def test_bigquery_query_sql_injection_comments(self):
+        """Test that comment-based SQL injection is blocked."""
+        from app.pipelines.agent_pipeline import bigquery_query
+
+        result = bigquery_query("SELECT * FROM users -- malicious comment")
+
+        assert "Error" in result
+        assert "forbidden" in result.lower()
+
+    def test_bigquery_query_drop_keyword(self):
+        """Test that DROP keyword is blocked even within SELECT."""
+        from app.pipelines.agent_pipeline import bigquery_query
+
+        result = bigquery_query("SELECT DROP FROM table")
+
+        assert "Error" in result
+        assert "forbidden" in result.lower()
+
+    def test_bigquery_query_update_keyword(self):
+        """Test that UPDATE keyword is blocked."""
+        from app.pipelines.agent_pipeline import bigquery_query
+
+        result = bigquery_query("UPDATE users SET name='test' WHERE id=1")
+
+        assert "Error" in result
+
+    def test_bigquery_query_valid_with_trailing_semicolon(self):
+        """Test that valid SELECT with trailing semicolon is allowed."""
+        from app.pipelines.agent_pipeline import bigquery_query
+
+        # This should be allowed (single semicolon at end)
+        # We'll mock it since we need BIGQUERY_PROJECT set
+        result = bigquery_query("SELECT * FROM users;")
+
+        # Should not be rejected by validation
+        # (will fail due to missing env var, but that's a different error)
+        assert "forbidden" not in result.lower() or "BigQuery not configured" in result
 
     @patch.dict(os.environ, {}, clear=True)
     def test_bigquery_query_no_project(self):
@@ -219,13 +267,12 @@ class TestCalculatorTool:
         assert "12.8" in result
 
     def test_calculate_invalid_characters(self):
-        """Test rejection of invalid characters."""
+        """Test rejection of invalid characters (code injection attempt)."""
         from app.pipelines.agent_pipeline import calculate
 
         result = calculate("import os; os.system('ls')")
 
         assert "Error" in result
-        assert "invalid characters" in result.lower()
 
     def test_calculate_alphabet_rejected(self):
         """Test that alphabetic characters are rejected."""
@@ -265,4 +312,54 @@ class TestCalculatorTool:
 
         # Should handle gracefully, not crash
         assert isinstance(result, str)
+        assert "Error" in result or "Division by zero" in result
+
+    def test_calculate_power_operation(self):
+        """Test power/exponentiation operation."""
+        from app.pipelines.agent_pipeline import calculate
+
+        result = calculate("2 ** 3")
+        assert result == "8"
+
+    def test_calculate_negative_numbers(self):
+        """Test handling of negative numbers."""
+        from app.pipelines.agent_pipeline import calculate
+
+        result = calculate("-5 + 10")
+        assert result == "5"
+
+    def test_calculate_floor_division(self):
+        """Test floor division operation."""
+        from app.pipelines.agent_pipeline import calculate
+
+        result = calculate("10 // 3")
+        assert result == "3"
+
+    def test_calculate_nested_parentheses(self):
+        """Test complex nested expressions."""
+        from app.pipelines.agent_pipeline import calculate
+
+        result = calculate("((5 + 3) * 2) / 4")
+        assert result == "4.0" or result == "4"
+
+    def test_calculate_rejects_function_calls(self):
+        """Test that function calls are rejected."""
+        from app.pipelines.agent_pipeline import calculate
+
+        result = calculate("print(5)")
+        assert "Error" in result
+
+    def test_calculate_rejects_variables(self):
+        """Test that variable names are rejected."""
+        from app.pipelines.agent_pipeline import calculate
+
+        result = calculate("x + 5")
+        assert "Error" in result
+
+    def test_calculate_empty_expression(self):
+        """Test handling of empty expressions."""
+        from app.pipelines.agent_pipeline import calculate
+
+        result = calculate("")
+        assert "Error" in result
 

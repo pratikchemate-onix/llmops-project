@@ -159,10 +159,10 @@ jobs:
 
       - name: Download Saved Plan
         if: inputs.use_saved_plan
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.PLAN_FILE }}
-          path: terraform/main
+          path: infra/advanced_deployment/main
 
       - name: Terraform Plan
         id: plan
@@ -200,10 +200,10 @@ jobs:
 
       - name: Upload Plan Artifact
         if: inputs.save_plan && steps.plan.outcome == 'success'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PLAN_FILE }}
-          path: terraform/main/${{ env.PLAN_FILE }}
+          path: infra/advanced_deployment/main/${{ env.PLAN_FILE }}
           retention-days: 7
 
       - name: Generate Plan Summary
