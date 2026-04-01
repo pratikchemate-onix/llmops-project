@@ -5,6 +5,7 @@ ADK manages the think → act → observe loop automatically.
 
 import logging
 import os
+import re
 from datetime import datetime
 from typing import Any
 
@@ -26,8 +27,9 @@ def bigquery_query(sql_query: str) -> str:
     Returns:
         Query results as a formatted string, max 20 rows.
     """
-    if not sql_query.strip().upper().startswith("SELECT"):
-        return "Error: Only SELECT queries are allowed for safety."
+    # Validate SQL query for safety
+    if not _is_safe_select_query(sql_query):
+        return "Error: Only safe SELECT queries are allowed. Query contains forbidden keywords or syntax."
 
     project = os.getenv("BIGQUERY_PROJECT")
     if not project:
@@ -37,6 +39,11 @@ def bigquery_query(sql_query: str) -> str:
         from google.cloud import bigquery
 
         client = bigquery.Client(project=project)
+        # Use dry_run to validate query before execution
+        job_config = bigquery.QueryJobConfig(dry_run=True, use_query_cache=False)
+        client.query(sql_query, job_config=job_config)  # Validation pass
+
+        # Execute the actual query
         query_job = client.query(sql_query)
         rows = list(query_job.result())
 
@@ -57,6 +64,54 @@ def bigquery_query(sql_query: str) -> str:
 
     except Exception as e:
         return f"Query failed: {str(e)}"
+
+
+def _is_safe_select_query(sql_query: str) -> bool:
+    """Validate that SQL query is a safe SELECT statement.
+
+    Args:
+        sql_query: The SQL query to validate.
+
+    Returns:
+        True if the query is safe, False otherwise.
+    """
+    # Normalize query for checking
+    normalized = sql_query.strip().upper()
+
+    # Must start with SELECT
+    if not normalized.startswith("SELECT"):
+        return False
+
+    # Forbidden keywords that indicate write operations or dangerous commands
+    forbidden_keywords = [
+        "DROP", "DELETE", "UPDATE", "INSERT", "ALTER", "CREATE",
+        "TRUNCATE", "REPLACE", "MERGE", "GRANT", "REVOKE",
+        "EXEC", "EXECUTE", "CALL", "SCRIPT", "PROCEDURE"
+    ]
+
+    # Check for semicolons (multi-statement injection)
+    # Allow semicolon only at the very end (common SQL convention)
+    semicolon_count = sql_query.count(";")
+    if semicolon_count > 1:
+        return False
+    if semicolon_count == 1 and not sql_query.rstrip().endswith(";"):
+        return False
+
+    # Remove the trailing semicolon for keyword checking
+    query_to_check = sql_query.rstrip(";").strip()
+
+    # Check for forbidden keywords in the query
+    for keyword in forbidden_keywords:
+        # Use word boundaries to avoid false positives (e.g., "DESCRIPTION" contains "DROP")
+        if re.search(r'\b' + keyword + r'\b', query_to_check.upper()):
+            return False
+
+    # Check for comment-based injection attempts (-- or /* */)
+    # These could be used to comment out validation checks
+    if "--" in sql_query or "/*" in sql_query or "*/" in sql_query:
+        return False
+
+    return True
 
 
 def list_gcs_files(bucket_name: str, prefix: str = "") -> str:
@@ -85,7 +140,7 @@ def list_gcs_files(bucket_name: str, prefix: str = "") -> str:
 
 
 def calculate(expression: str) -> str:
-    """Safely evaluate a mathematical expression.
+    """Safely evaluate a mathematical expression using AST parsing.
 
     Args:
         expression: A mathematical expression string (e.g., '25 * 4 + 10').
@@ -93,13 +148,58 @@ def calculate(expression: str) -> str:
     Returns:
         The result as a string.
     """
+    import ast
+    import operator
+
+    # Supported operators
+    operators = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+        ast.FloorDiv: operator.floordiv,
+        ast.Mod: operator.mod,
+        ast.Pow: operator.pow,
+        ast.UAdd: operator.pos,
+        ast.USub: operator.neg,
+    }
+
+    def eval_node(node):
+        """Recursively evaluate AST nodes safely."""
+        if isinstance(node, ast.Num):  # Python 3.7 compatibility
+            return node.n
+        elif isinstance(node, ast.Constant):  # Python 3.8+
+            if isinstance(node.value, (int, float)):
+                return node.value
+            raise ValueError("Only numeric constants allowed")
+        elif isinstance(node, ast.BinOp):
+            left = eval_node(node.left)
+            right = eval_node(node.right)
+            op = operators.get(type(node.op))
+            if op is None:
+                raise ValueError(f"Unsupported operator: {type(node.op).__name__}")
+            return op(left, right)
+        elif isinstance(node, ast.UnaryOp):
+            operand = eval_node(node.operand)
+            op = operators.get(type(node.op))
+            if op is None:
+                raise ValueError(f"Unsupported operator: {type(node.op).__name__}")
+            return op(operand)
+        else:
+            raise ValueError(f"Unsupported expression type: {type(node).__name__}")
+
     try:
-        # Only allow safe math operations
-        allowed = set("0123456789+-*/().,% ")
-        if not all(c in allowed for c in expression):
-            return "Error: Expression contains invalid characters."
-        result = eval(expression, {"__builtins__": {}}, {})  # noqa: S307
+        # Parse the expression into an AST
+        tree = ast.parse(expression, mode='eval')
+        # Evaluate the AST safely
+        result = eval_node(tree.body)
         return str(result)
+    except SyntaxError:
+        return "Error: Invalid expression syntax."
+    except ValueError as e:
+        return f"Error: {str(e)}"
+    except ZeroDivisionError:
+        return "Error: Division by zero."
     except Exception as e:
         return f"Calculation error: {str(e)}"
 
